@@ -4,14 +4,16 @@ const mongoose = require("mongoose");
 const passport = require("passport");
 const LocalStrategy = require("passport-local").Strategy;
 const jsonwebtoken = require("jsonwebtoken");
-const userRouter = require("./Routes/RegisterRoute");
+const userRouter = require("../api/Routes/RegisterRoute");
 // import User from "./models/user";
-const multer = require("multer");
-const path = require("path");
+// const multer = require("multer");
+// const path = require("path");
 const bcrypt = require("bcryptjs");
 const http = require("http");
 // const socketIo = require("socket.io");
 const { Server } = require("socket.io");
+const multer = require("multer");
+const path = require("path");
 // const cors = require("cors");
 
 // import multer from "multer";
@@ -56,22 +58,25 @@ app.use("/user", userRouter);
 
 ///register api
 
+// Setup storage for Multer
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/"); // Specify your upload directory
+  destination: function (req, file, cb) {
+    cb(null, "uploads/"); // Ensure this directory exists
   },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + "-" + file.originalname); // Customize the filename
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname)); // Append extension
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({ storage: storage });
+
+// const upload = multer({ storage });
 
 // const router = express.Router();
 
 app.post("/user/register", upload.single("image"), async (req, res) => {
   const { name, email, password } = req.body;
-  const image = req.file.path; // Path to the uploaded image
+  const image = req.file.path;
 
   try {
     const existingUser = await User.findOne({ email });
@@ -97,14 +102,28 @@ app.post("/user/register", upload.single("image"), async (req, res) => {
 
 app.get("/users/:userId", (req, res) => {
   const loggedUserId = req.params.userId;
+  const searchQuery = req.query.search || ""; // Get the search query from the query parameters
 
-  User.find({ _id: { $ne: loggedUserId } })
+  // Create a filter for searching
+  let searchFilter = {
+    _id: { $ne: loggedUserId }, // Exclude the logged-in user
+  };
+
+  // If a search query exists, filter by name or email using case-insensitive regex
+  if (searchQuery) {
+    searchFilter.$or = [
+      { name: { $regex: searchQuery, $options: "i" } }, // case-insensitive search for name
+      { email: { $regex: searchQuery, $options: "i" } }, // case-insensitive search for email
+    ];
+  }
+
+  User.find(searchFilter)
     .then((users) => {
       res.status(200).json(users);
     })
     .catch((error) => {
-      console.log("Error whileretriving users", error);
-      res.status(400).json({ message: "Error retriving users" });
+      console.log("Error retrieving users", error);
+      res.status(400).json({ message: "Error retrieving users" });
     });
 });
 
