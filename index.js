@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 const passport = require("passport");
 const LocalStrategy = require("passport-local").Strategy;
 const jsonwebtoken = require("jsonwebtoken");
-const userRouter = require("../api/Routes/RegisterRoute");
+const userRouter = require("./Routes/RegisterRoute");
 // import User from "./models/user";
 // const multer = require("multer");
 // const path = require("path");
